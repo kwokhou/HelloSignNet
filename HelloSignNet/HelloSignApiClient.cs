@@ -56,39 +56,20 @@ namespace HelloSignNet
 
         public Task<SignatureRequestResponse> SendSignatureRequest(SignatureRequestData request, int milisecondsTimeout = 100000)
         {
-            using (var formData = CreateFormData(request))
+            var formData = CreateFormData(request);
+            return _client.PostAsync(_config.SendSignatureRequestUri, formData).ContinueWith(t =>
             {
-                var tcs = new TaskCompletionSource<SignatureRequestResponse>();
+                t.Result.EnsureSuccessStatusCode();
 
-                var postTask = _client.PostAsync(_config.SendSignatureRequestUri, formData).ContinueWith(t =>
-                    {
-                        try
-                        {
-                            t.Result.EnsureSuccessStatusCode();
+                var serializer = new JsonSerializer { ContractResolver = new FrameworkHelper.UnderscoreMappingResolver() };
 
-                            var serializer = new JsonSerializer
-                            {
-                                ContractResolver = new FrameworkHelper.UnderscoreMappingResolver()
-                            };
-
-                            using (var streamReader = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
-                            using (var jsonReader = new JsonTextReader(streamReader))
-                            {
-                                var response = serializer.Deserialize<SignatureRequestResponse>(jsonReader);
-                                tcs.TrySetResult(response);
-                            }
-                        }
-                        catch(Exception ex)
-                        {
-                            tcs.TrySetException(ex);
-                        }
-
-                    });
-                
-                postTask.Wait(milisecondsTimeout);
-
-                return tcs.Task;
-            }
+                using (var streamReader = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
+                using (var jsonReader = new JsonTextReader(streamReader))
+                {
+                    var response = serializer.Deserialize<SignatureRequestResponse>(jsonReader);
+                    return response;
+                }
+            });
         }
 
         private MultipartFormDataContent CreateFormData(SignatureRequestData request)

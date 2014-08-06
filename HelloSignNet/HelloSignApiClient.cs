@@ -54,37 +54,38 @@ namespace HelloSignNet
             _config = config;
         }
 
-        public Task<string> SendSignatureRequest(SignatureRequestData request)
+        public Task<SignatureRequestResponse> SendSignatureRequest(SignatureRequestData request, int milisecondsTimeout = 100000)
         {
-            string signatureRequestId = "UNKNOWN";
-
             using (var formData = CreateFormData(request))
             {
-                var postTask = _client.PostAsync(_config.SendSignatureRequestUri, formData)
-                    .ContinueWith(t =>
+                var tcs = new TaskCompletionSource<SignatureRequestResponse>();
+
+                var postTask = _client.PostAsync(_config.SendSignatureRequestUri, formData).ContinueWith(t =>
                     {
-                        t.Result.EnsureSuccessStatusCode();
-
-                        var readTask = t.Result.Content.ReadAsStreamAsync();
-                        readTask.Wait();
-
-                        var serializer = new JsonSerializer
+                        try
                         {
-                            ContractResolver = new FrameworkHelper.UnderscoreMappingResolver()
-                        };
+                            t.Result.EnsureSuccessStatusCode();
 
-                        using (var streamReader = new StreamReader(readTask.Result))
-                        using (var jsonReader = new JsonTextReader(streamReader))
-                        {
-                            var result = serializer.Deserialize<SignatureRequestResponse>(jsonReader);
-                            signatureRequestId = result.SignatureRequest.SignatureRequestId;
+                            var serializer = new JsonSerializer
+                            {
+                                ContractResolver = new FrameworkHelper.UnderscoreMappingResolver()
+                            };
+
+                            using (var streamReader = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
+                            using (var jsonReader = new JsonTextReader(streamReader))
+                            {
+                                var response = serializer.Deserialize<SignatureRequestResponse>(jsonReader);
+                                tcs.TrySetResult(response);
+                            }
                         }
+                        catch(Exception ex)
+                        {
+                            tcs.TrySetException(ex);
+                        }
+
                     });
-
-                postTask.Wait();
-
-                var tcs = new TaskCompletionSource<string>();
-                tcs.SetResult(signatureRequestId);
+                
+                postTask.Wait(milisecondsTimeout);
 
                 return tcs.Task;
             }

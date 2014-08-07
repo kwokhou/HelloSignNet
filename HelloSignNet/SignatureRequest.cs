@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace HelloSignNet
 {
-    public class SignatureRequestData
+    public class SendSignatureRequestData
     {
         public string Title { get; set; }
         public string Subject { get; set; }
@@ -18,7 +18,7 @@ namespace HelloSignNet
         public List<string> FileUrls { get; set; }
         public int TestMode { get; set; } // true=1, false=0
 
-        public SignatureRequestData()
+        public SendSignatureRequestData()
         {
             Signers = new List<Signer>();
             CcEmailAddresses = new List<string>();
@@ -28,13 +28,10 @@ namespace HelloSignNet
         }
     }
 
-    public class ResponseData
+    public class RemindSignatureRequestData
     {
-        public string ApiId { get; set; }
-        public string Name { get; set; }
-        public string SignatureId { get; set; }
-        public string Value { get; set; }
-        public string Type { get; set; }
+        public string SignatureRequestId { get; set; }
+        public string EmailAddress { get; set; }
     }
 
     public class SignatureRequest
@@ -57,6 +54,11 @@ namespace HelloSignNet
         public string RequesterEmailAddress { get; set; }
         public List<Signature> Signatures { get; set; }
         public List<string> CcEmailAddresses { get; set; }
+    }
+
+    public class SignatureRequestResponse
+    {
+        public SignatureRequest SignatureRequest { get; set; }
     }
 
     public class Signature
@@ -85,8 +87,13 @@ namespace HelloSignNet
         }
     }
 
-    public class SignatureRequestResponse
+    public class ResponseData
     {
-        public SignatureRequest SignatureRequest { get; set; }
+        public string ApiId { get; set; }
+        public string Name { get; set; }
+        public string SignatureId { get; set; }
+        public string Value { get; set; }
+        public string Type { get; set; }
     }
+
 }

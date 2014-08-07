@@ -13,10 +13,12 @@ namespace HelloSignNet
 {
     public class HelloSignConfig
     {
+        public const int DefaultApiTimeoutMiliseconds = 100000;
         public string ApiKey { get; set; }
         public string BaseUri { get; set; }
-        public string SignatureRequestUri { get; set; }
+        public string GetSignatureRequestUri { get; set; }
         public string SendSignatureRequestUri { get; set; }
+        public string RemindSignatureRequestUri { get; set; }
 
         public HelloSignConfig()
         {
@@ -27,52 +29,107 @@ namespace HelloSignNet
         {
             ApiKey = apiKey;
             BaseUri = baseUri;
-            SignatureRequestUri = BaseUri + "signature_request";
+            GetSignatureRequestUri = BaseUri + "signature_request";
             SendSignatureRequestUri = BaseUri + "signature_request/send";
+            RemindSignatureRequestUri = BaseUri + "signature_request/remind";
         }
     }
 
     public class HelloSignApiClient
     {
         private readonly HttpClient _client;
-        private readonly HelloSignConfig _config;
+        private JsonSerializer _serializer;
+        public HelloSignConfig Config { get; set; }
 
-        public HelloSignApiClient(string apiKey)
-            : this(new HelloSignConfig(apiKey))
+        private JsonSerializer Serializer
         {
+            get
+            {
+                if (_serializer == null)
+                {
+                    _serializer = new JsonSerializer { ContractResolver = new FrameworkHelper.UnderscoreMappingResolver() };
+                }
+                return _serializer;
+            }
         }
 
         public HelloSignApiClient(HelloSignConfig config)
         {
-            _config = config;
-            _client = FrameworkHelper.CreateBasicAuthHttpClient(_config.ApiKey, "");
+            Config = config;
+            _client = FrameworkHelper.CreateBasicAuthHttpClient(Config.ApiKey, "");
+        }
+
+        public HelloSignApiClient(string apiKey)
+            : this(new HelloSignConfig(apiKey))
+        {
+            // elided
         }
 
         public HelloSignApiClient(HttpClient httpClient, HelloSignConfig config)
         {
             _client = httpClient;
-            _config = config;
+            Config = config;
         }
 
-        public Task<SignatureRequestResponse> SendSignatureRequest(SignatureRequestData request, int milisecondsTimeout = 100000)
+        public Task<SignatureRequestResponse> GetSignatureRequest(string signatureRequestId, int milisecondsTimeout = HelloSignConfig.DefaultApiTimeoutMiliseconds)
+        {
+            return _client.GetAsync(Config.GetSignatureRequestUri + "/" + signatureRequestId)
+                .ContinueWith(t =>
+                {
+                    t.Result.EnsureSuccessStatusCode();
+
+                    using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
+                    using (var jtr = new JsonTextReader(sr))
+                    {
+                        var response = Serializer.Deserialize<SignatureRequestResponse>(jtr);
+                        return response;
+                    }
+                });
+        }
+
+        public Task<SignatureRequestResponse> SendSignatureRequest(SendSignatureRequestData request, int milisecondsTimeout = HelloSignConfig.DefaultApiTimeoutMiliseconds)
         {
             var formData = CreateFormData(request);
-            return _client.PostAsync(_config.SendSignatureRequestUri, formData).ContinueWith(t =>
-            {
-                t.Result.EnsureSuccessStatusCode();
 
-                var serializer = new JsonSerializer { ContractResolver = new FrameworkHelper.UnderscoreMappingResolver() };
+            return _client.PostAsync(Config.SendSignatureRequestUri, formData).ContinueWith(t =>
+                    {
+                        t.Result.EnsureSuccessStatusCode();
 
-                using (var streamReader = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
-                using (var jsonReader = new JsonTextReader(streamReader))
-                {
-                    var response = serializer.Deserialize<SignatureRequestResponse>(jsonReader);
-                    return response;
-                }
-            });
+                        using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
+                        using (var jtr = new JsonTextReader(sr))
+                        {
+                            var response = Serializer.Deserialize<SignatureRequestResponse>(jtr);
+                            return response;
+                        }
+                    });
         }
 
-        private MultipartFormDataContent CreateFormData(SignatureRequestData request)
+        public Task<SignatureRequestResponse> RemindSignatureRequest(RemindSignatureRequestData request, int milisecondsTimeout = HelloSignConfig.DefaultApiTimeoutMiliseconds)
+        {
+            var formData = CreateFormData(request);
+
+            return _client.PostAsync(Config.RemindSignatureRequestUri + "/" + request.SignatureRequestId, formData).ContinueWith(t =>
+                    {
+                        t.Result.EnsureSuccessStatusCode();
+
+                        using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
+                        using (var jtr = new JsonTextReader(sr))
+                        {
+                            var response = Serializer.Deserialize<SignatureRequestResponse>(jtr);
+                            return response;
+                        }
+                    });
+        }
+
+        private MultipartFormDataContent CreateFormData(RemindSignatureRequestData request)
+        {
+            var formData = new MultipartFormDataContent();
+            if (!string.IsNullOrEmpty(request.EmailAddress))
+                formData.AddStringContent("email_address", request.EmailAddress);
+            return formData;
+        }
+
+        private MultipartFormDataContent CreateFormData(SendSignatureRequestData request)
         {
             var formData = new MultipartFormDataContent();
 
@@ -108,5 +165,6 @@ namespace HelloSignNet
             */
             return formData;
         }
+
     }
 }

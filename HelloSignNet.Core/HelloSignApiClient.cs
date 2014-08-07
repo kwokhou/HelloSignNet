@@ -9,32 +9,8 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace HelloSignNet
+namespace HelloSignNet.Core
 {
-    public class HelloSignConfig
-    {
-        public const int DefaultApiTimeoutMiliseconds = 100000;
-        public string ApiKey { get; set; }
-        public string BaseUri { get; set; }
-        public string GetSignatureRequestUri { get; set; }
-        public string SendSignatureRequestUri { get; set; }
-        public string RemindSignatureRequestUri { get; set; }
-
-        public HelloSignConfig()
-        {
-            // elided
-        }
-
-        public HelloSignConfig(string apiKey, string baseUri = "https://api.hellosign.com/v3/")
-        {
-            ApiKey = apiKey;
-            BaseUri = baseUri;
-            GetSignatureRequestUri = BaseUri + "signature_request";
-            SendSignatureRequestUri = BaseUri + "signature_request/send";
-            RemindSignatureRequestUri = BaseUri + "signature_request/remind";
-        }
-    }
-
     public class HelloSignApiClient
     {
         private readonly HttpClient _client;
@@ -45,13 +21,11 @@ namespace HelloSignNet
         {
             get
             {
-                if (_serializer == null)
-                {
-                    _serializer = new JsonSerializer { ContractResolver = new FrameworkHelper.UnderscoreMappingResolver() };
-                }
-                return _serializer;
+                return _serializer ?? (_serializer = new JsonSerializer { ContractResolver = new FrameworkHelper.UnderscoreMappingResolver() });
             }
         }
+
+        public IFileStorage FileStorage { get; set; }
 
         public HelloSignApiClient(HelloSignConfig config)
         {
@@ -121,6 +95,40 @@ namespace HelloSignNet
                     });
         }
 
+        public Task<string> DownloadSignatureRequestDocuments(DownloadSignatureRequestData request, string outputPath, int milisecondsTimeout = HelloSignConfig.DefaultApiTimeoutMiliseconds)
+        {
+            if (FileStorage == null)
+                throw new IOException("Undefined FileStore in HelloSign.Config");
+
+            var getUrl = Config.GetSignatureRequestFilesUri + "/" + request.SignatureRequestId;
+
+            if (!string.IsNullOrEmpty(request.FileType))
+                getUrl = getUrl + "?file_type=" + request.FileType;
+
+            return _client.GetAsync(getUrl, HttpCompletionOption.ResponseHeadersRead).ContinueWith(t =>
+                {
+                    var response = t.Result;
+                    var contentDisposition = response.Content.Headers.ContentDisposition;
+                    var filename = contentDisposition.FileName.Trim('"');
+
+                    response.EnsureSuccessStatusCode();
+                    response.Content.ReadAsStreamAsync().ContinueWith(a => FileStorage.SaveFileAsync(a.Result, outputPath, filename));
+
+                    return filename;
+                });
+        }
+
+        public Task<bool> CancelSignatureRequest(string signatureRequestId, int milisecondsTimeout = HelloSignConfig.DefaultApiTimeoutMiliseconds)
+        {
+            return _client.PostAsync(Config.CancelSignatureRequestUri + "/" + signatureRequestId, null).ContinueWith(t =>
+                {
+                    var response = t.Result;
+                    response.EnsureSuccessStatusCode();
+
+                    return response.IsSuccessStatusCode;
+                });
+        }
+
         private MultipartFormDataContent CreateFormData(RemindSignatureRequestData request)
         {
             var formData = new MultipartFormDataContent();
@@ -165,6 +173,5 @@ namespace HelloSignNet
             */
             return formData;
         }
-
     }
 }

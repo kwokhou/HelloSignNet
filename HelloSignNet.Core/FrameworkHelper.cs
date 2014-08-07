@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using Newtonsoft.Json.Serialization;
 
-namespace HelloSignNet
+namespace HelloSignNet.Core
 {
     public static class FrameworkHelper
     {

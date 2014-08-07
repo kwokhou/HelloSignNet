@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace HelloSignNet
+namespace HelloSignNet.Core
 {
+    public interface IFileStorage
+    {
+        void SaveFileAsync(Stream stream, string filepath, string filename);
+        string LoadFileAsync(string filename);
+    }
+
     public class SendSignatureRequestData
     {
         public string Title { get; set; }
@@ -32,6 +40,12 @@ namespace HelloSignNet
     {
         public string SignatureRequestId { get; set; }
         public string EmailAddress { get; set; }
+    }
+
+    public class DownloadSignatureRequestData
+    {
+        public string SignatureRequestId { get; set; }
+        public string FileType { get; set; }
     }
 
     public class SignatureRequest

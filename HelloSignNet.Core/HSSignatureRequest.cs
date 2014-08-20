@@ -9,11 +9,11 @@ namespace HelloSignNet.Core
         string LoadFileAsync(string filename);
     }
 
-    public class SendSignatureRequestData
+    public class HSSendSignatureRequestData
     {
-        public SendSignatureRequestData()
+        public HSSendSignatureRequestData()
         {
-            Signers = new List<Signer>();
+            Signers = new List<HSSigner>();
             CcEmailAddresses = new List<string>();
             //Files = new List<FileInfo>();
             FileUrls = new List<string>();
@@ -24,26 +24,26 @@ namespace HelloSignNet.Core
         public string Subject { get; set; }
         public string Message { get; set; }
         public string SigningRedirectUrl { get; set; }
-        public List<Signer> Signers { get; set; }
+        public List<HSSigner> Signers { get; set; }
         public List<string> CcEmailAddresses { get; set; }
         //public List<FileInfo> Files { get; set; }
         public List<string> FileUrls { get; set; }
         public int TestMode { get; set; } // true=1, false=0
     }
 
-    public class RemindSignatureRequestData
+    public class HSRemindSignatureRequestData
     {
         public string SignatureRequestId { get; set; }
         public string EmailAddress { get; set; }
     }
 
-    public class DownloadSignatureRequestData
+    public class HSDownloadSignatureRequestData
     {
         public string SignatureRequestId { get; set; }
         public string FileType { get; set; }
     }
 
-    public class SignatureRequest
+    public class HSSignatureRequest
     {
         public string SignatureRequestId { get; set; }
         public string Title { get; set; }
@@ -54,23 +54,24 @@ namespace HelloSignNet.Core
         public bool IsComplete { get; set; }
         public bool HasError { get; set; }
         public List<string> CustomFields { get; set; }
-        public List<ResponseData> ResponseData { get; set; }
+        public List<HSResponseData> ResponseData { get; set; }
         public string SigningUrl { get; set; }
         public string SigningRedirectUrl { get; set; }
         public string FinalCopyUri { get; set; }
         public string FilesUrl { get; set; }
         public string DetailsUrl { get; set; }
         public string RequesterEmailAddress { get; set; }
-        public List<Signature> Signatures { get; set; }
+        public List<HSSignature> Signatures { get; set; }
         public List<string> CcEmailAddresses { get; set; }
     }
 
-    public class SignatureRequestResponse
+    public class HSSignatureRequestResponse
     {
-        public SignatureRequest SignatureRequest { get; set; }
+        public HSSignatureRequest SignatureRequest { get; set; }
+        public HSError Error { get; set; }
     }
 
-    public class Signature
+    public class HSSignature
     {
         public string SignatureId { get; set; }
         public string SignerEmailAddress { get; set; }
@@ -83,9 +84,9 @@ namespace HelloSignNet.Core
         public bool HasPin { get; set; }
     }
 
-    public class Signer
+    public class HSSigner
     {
-        public Signer(string name, string emailAddress)
+        public HSSigner(string name, string emailAddress)
         {
             Name = name;
             EmailAddress = emailAddress;
@@ -97,7 +98,7 @@ namespace HelloSignNet.Core
         public string Pin { get; set; }
     }
 
-    public class ResponseData
+    public class HSResponseData
     {
         public string ApiId { get; set; }
         public string Name { get; set; }

@@ -70,8 +70,12 @@
     <Compile Include="FrameworkHelper.cs" />
     <Compile Include="HelloSignApiClient.cs" />
     <Compile Include="HelloSignConfig.cs" />
+    <Compile Include="HSAccount.cs" />
+    <Compile Include="HSError.cs" />
+    <Compile Include="HSWarning.cs" />
+    <Compile Include="HSBaseResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SignatureRequest.cs" />
+    <Compile Include="HSSignatureRequest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

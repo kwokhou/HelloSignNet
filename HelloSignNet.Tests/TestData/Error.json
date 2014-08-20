@@ -1,0 +1,6 @@
+﻿{
+    "error": {
+        "error_msg": "Unauthorized user.", 
+        "error_name": "unauthorized"
+    }
+}

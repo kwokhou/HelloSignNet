@@ -1,0 +1,8 @@
+﻿{
+    "warnings": [
+        {
+            "warning_msg": "This SignatureRequest will be placed on hold until the user confirms their email address.",
+            "warning_name": "unconfirmed"
+        }
+    ]
+}

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -39,19 +40,77 @@ namespace HelloSignNet.Tests
         }
 
         [Fact]
-        public void GetAccount()
+        public void GetAccount_Success_Response_Test()
         {
-            using (var fs = new FileStream("TestData\\GetAccount-OK.json", FileMode.Open, FileAccess.Read))
+            var json = File.ReadAllText("TestData\\GetAccount-OK.json");
+            var fakeHandler = new FakeHttpHandler(HttpStatusCode.OK, json);
+
+            using (var httpClient = new HttpClient(fakeHandler))
             {
-                var fakeHandler = new FakeHttpHandler(HttpStatusCode.OK, fs);
+                var apiClient = new HelloSignApiClient(httpClient);
+                var t = apiClient.GetAccount();
 
-                using (var httpClient = new HttpClient(fakeHandler))
+                var expected = new HSAccount
                 {
-                    var apiClient = new HelloSignApiClient(httpClient);
-                    var t = apiClient.GetAccount();
+                    AccountId = "abcXYZ",
+                    EmailAddress = "me@hellosign.com",
+                    IsPaidHS = true,
+                    IsPaidHF = false,
+                    CallbackUrl = null,
+                    RoleCode = null,
+                    Quotas = new HSQuotas
+                    {
+                        ApiSignatureRequest = 1250,
+                        DocumentsLeft = null,
+                        TemplatesLeft = null
+                    }
+                };
 
-                    Assert.Equal("abcXYZ", t.Result.Account.AccountId);
-                }
+                Assert.Equal(expected, t.Result.Account);
+            }
+        }
+
+        [Fact]
+        public void Get_Unauthorized_Error_Test()
+        {
+            var json = File.ReadAllText("TestData\\Error.json");
+            var fakeHandler = new FakeHttpHandler(HttpStatusCode.Unauthorized, json);
+
+            using (var httpClient = new HttpClient(fakeHandler))
+            {
+                var apiClient = new HelloSignApiClient(httpClient);
+                var t = apiClient.GetAccount();
+
+                var expected = new HSError
+                {
+                    ErrorMsg = "Unauthorized user.",
+                    ErrorName = "unauthorized"
+                };
+
+                Assert.Equal(expected, t.Result.Error);
+            }
+        }
+
+        [Fact]
+        public void Get_Warning_Response_Test()
+        {
+            var json = File.ReadAllText("TestData\\Warning.json");
+            var fakeHandler = new FakeHttpHandler(HttpStatusCode.OK, json);
+
+            using (var httpClient = new HttpClient(fakeHandler))
+            {
+                var apiClient = new HelloSignApiClient(httpClient);
+                var t = apiClient.GetAccount();
+
+                var warnings = new List<HSWarning>();
+                var expected = new HSWarning
+                {
+                    WarningMsg = "This SignatureRequest will be placed on hold until the user confirms their email address.",
+                    WarningName = "unconfirmed"
+                };
+                warnings.Add(expected);
+
+                Assert.Equal(warnings[0], t.Result.Warnings[0]);
             }
         }
 
@@ -65,7 +124,7 @@ namespace HelloSignNet.Tests
         [Fact]
         public void SendSignatureRequestTest()
         {
-            var signatureRequest = new SendSignatureRequestData();
+            var signatureRequest = new HSSendSignatureRequestData();
 
             var t = _helloClient.SendSignatureRequest(signatureRequest);
 
@@ -75,7 +134,7 @@ namespace HelloSignNet.Tests
         [Fact]
         public void RemindSignatureRequestTest()
         {
-            var remindSignatureRequestData = new RemindSignatureRequestData
+            var remindSignatureRequestData = new HSRemindSignatureRequestData
             {
                 SignatureRequestId = "c406d5a99cce33ee0026ade5a939183a833c195b",
                 EmailAddress = "andy@estorm.com"
@@ -96,7 +155,7 @@ namespace HelloSignNet.Tests
         [Fact]
         public void DownloadSignatureRequestDocumentsTest()
         {
-            var downloadSignatureRequestData = new DownloadSignatureRequestData { SignatureRequestId = "ab0f0999743c14fc3a5fa0d830f7220899a1ab58", FileType = "pdf" };
+            var downloadSignatureRequestData = new HSDownloadSignatureRequestData { SignatureRequestId = "ab0f0999743c14fc3a5fa0d830f7220899a1ab58", FileType = "pdf" };
 
             var t = _helloClient.DownloadSignatureRequestDocuments(downloadSignatureRequestData, @"c:\temp");
 

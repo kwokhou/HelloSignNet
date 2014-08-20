@@ -9,14 +9,14 @@ namespace HelloSignNet.Core
 {
     public class HelloSignApiClient
     {
-        private readonly HttpClient _client;
+        private readonly HttpClient _httpClient;
         private JsonSerializer _serializer;
 
         public HelloSignApiClient(HelloSignConfig config)
         {
             Config = config;
-            _client = FrameworkHelper.CreateBasicAuthHttpClient(Config.ApiKey, "");
-            _client.Timeout = new TimeSpan(0, 0, 0, 0, config.ApiTimeoutMiliseconds);
+            _httpClient = FrameworkHelper.CreateBasicAuthHttpClient(Config.ApiKey, "");
+            _httpClient.Timeout = new TimeSpan(0, 0, 0, 0, config.ApiTimeoutMiliseconds);
         }
 
         public HelloSignApiClient(string apiKey)
@@ -25,10 +25,10 @@ namespace HelloSignNet.Core
             // elided
         }
 
-        public HelloSignApiClient(HttpClient httpClient, HelloSignConfig config)
+        public HelloSignApiClient(HttpClient httpClient, HelloSignConfig config = null)
         {
-            _client = httpClient;
-            Config = config;
+            _httpClient = httpClient;
+            Config = config ?? new HelloSignConfig("UNKNOWN-HELLOSIGN-API-KEY");
         }
 
         public HelloSignConfig Config { get; set; }
@@ -47,7 +47,7 @@ namespace HelloSignNet.Core
 
         public Task<SignatureRequestResponse> GetSignatureRequest(string signatureRequestId)
         {
-            return _client.GetAsync(Config.GetSignatureRequestUri + "/" + signatureRequestId)
+            return _httpClient.GetAsync(Config.GetSignatureRequestUri + "/" + signatureRequestId)
                 .ContinueWith(t =>
                 {
                     t.Result.EnsureSuccessStatusCode();
@@ -65,7 +65,7 @@ namespace HelloSignNet.Core
         {
             MultipartFormDataContent formData = CreateFormData(request);
 
-            return _client.PostAsync(Config.SendSignatureRequestUri, formData).ContinueWith(t =>
+            return _httpClient.PostAsync(Config.SendSignatureRequestUri, formData).ContinueWith(t =>
             {
                 t.Result.EnsureSuccessStatusCode();
 
@@ -83,7 +83,7 @@ namespace HelloSignNet.Core
             MultipartFormDataContent formData = CreateFormData(request);
 
             return
-                _client.PostAsync(Config.RemindSignatureRequestUri + "/" + request.SignatureRequestId, formData)
+                _httpClient.PostAsync(Config.RemindSignatureRequestUri + "/" + request.SignatureRequestId, formData)
                     .ContinueWith(t =>
                     {
                         t.Result.EnsureSuccessStatusCode();
@@ -107,7 +107,7 @@ namespace HelloSignNet.Core
             if (!string.IsNullOrEmpty(request.FileType))
                 getUrl = getUrl + "?file_type=" + request.FileType;
 
-            return _client.GetAsync(getUrl, HttpCompletionOption.ResponseHeadersRead).ContinueWith(t =>
+            return _httpClient.GetAsync(getUrl, HttpCompletionOption.ResponseHeadersRead).ContinueWith(t =>
             {
                 HttpResponseMessage response = t.Result;
                 ContentDispositionHeaderValue contentDisposition = response.Content.Headers.ContentDisposition;
@@ -124,7 +124,7 @@ namespace HelloSignNet.Core
         public Task<bool> CancelSignatureRequest(string signatureRequestId)
         {
             return
-                _client.PostAsync(Config.CancelSignatureRequestUri + "/" + signatureRequestId, null).ContinueWith(t =>
+                _httpClient.PostAsync(Config.CancelSignatureRequestUri + "/" + signatureRequestId, null).ContinueWith(t =>
                 {
                     HttpResponseMessage response = t.Result;
                     response.EnsureSuccessStatusCode();
@@ -178,5 +178,53 @@ namespace HelloSignNet.Core
             */
             return formData;
         }
+
+        public Task<AccountResponse> GetAccount()
+        {
+            return _httpClient.GetAsync(Config.GetAcountUri)
+                .ContinueWith(t =>
+                {
+                    t.Result.EnsureSuccessStatusCode();
+
+                    using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
+                    using (var jtr = new JsonTextReader(sr))
+                    {
+                        var response = Serializer.Deserialize<AccountResponse>(jtr);
+                        return response;
+                    }
+                });
+        }
+    }
+
+    public class Account
+    {
+        [JsonProperty("account_id")]
+        public string AccountId { get; set; }
+        [JsonProperty("email_address")]
+        public string EmailAddress { get; set; }
+        [JsonProperty("is_paid_hs")]
+        public string IsPaidHS { get; set; }
+        [JsonProperty("is_paid_hf")]
+        public string IsPaidHF { get; set; }
+        public Quotas Quotas { get; set; }
+        [JsonProperty("callback_url")]
+        public string CallbackUrl { get; set; }
+        [JsonProperty("role_code")]
+        public string RoleCode { get; set; }
+    }
+
+    public class Quotas
+    {
+        [JsonProperty("api_signature_requests_left")]
+        public int ApiSignatureRequest {get;set;}
+        [JsonProperty("documents_left")]
+        public int DocumentsLeft { get; set; }
+        [JsonProperty("templates_left")]
+        public int TemplatesLeft { get; set; }
+    }
+
+    public class AccountResponse
+    {
+        public Account Account { get; set; }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json.Serialization;
 
 namespace HelloSignNet.Core
@@ -19,7 +20,7 @@ namespace HelloSignNet.Core
             }
             return retval;
         }
-        
+
         public static HttpClient CreateBasicAuthHttpClient(string username, string password)
         {
             var client = new HttpClient();
@@ -30,13 +31,16 @@ namespace HelloSignNet.Core
 
             return client;
         }
-        public static MultipartFormDataContent AddStringContent(this MultipartFormDataContent formDataContent, string name, string content)
+
+        public static MultipartFormDataContent AddStringContent(this MultipartFormDataContent formDataContent,
+            string name, string content)
         {
             formDataContent.Add(CreateStringContent(name, content));
             return formDataContent;
         }
 
-        public static MultipartFormDataContent AddFileStreamContent(this MultipartFormDataContent formDataContent, string filePath, string filename)
+        public static MultipartFormDataContent AddFileStreamContent(this MultipartFormDataContent formDataContent,
+            string filePath, string filename)
         {
             /*
             var fs = new FileStream(filePath, FileMode.Open);
@@ -44,6 +48,7 @@ namespace HelloSignNet.Core
              */
             return formDataContent;
         }
+
         private static StringContent CreateStringContent(string name, string content)
         {
             var res = new StringContent(content);
@@ -72,7 +77,9 @@ namespace HelloSignNet.Core
             protected override string ResolvePropertyName(string propertyName)
             {
                 // Find the camelCase position to insert an underscore
-                return System.Text.RegularExpressions.Regex.Replace(propertyName, @"([A-Z])([A-Z][a-z])|([a-z0-9])([A-Z])", "$1$3_$2$4").ToLower();
+                return
+                    Regex.Replace(propertyName, @"([A-Z])([A-Z][a-z])|([a-z0-9])([A-Z])",
+                        "$1$3_$2$4").ToLower();
             }
         }
     }

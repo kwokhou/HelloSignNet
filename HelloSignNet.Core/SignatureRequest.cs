@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace HelloSignNet.Core
 {
@@ -16,6 +11,15 @@ namespace HelloSignNet.Core
 
     public class SendSignatureRequestData
     {
+        public SendSignatureRequestData()
+        {
+            Signers = new List<Signer>();
+            CcEmailAddresses = new List<string>();
+            //Files = new List<FileInfo>();
+            FileUrls = new List<string>();
+            TestMode = 0;
+        }
+
         public string Title { get; set; }
         public string Subject { get; set; }
         public string Message { get; set; }
@@ -25,15 +29,6 @@ namespace HelloSignNet.Core
         //public List<FileInfo> Files { get; set; }
         public List<string> FileUrls { get; set; }
         public int TestMode { get; set; } // true=1, false=0
-
-        public SendSignatureRequestData()
-        {
-            Signers = new List<Signer>();
-            CcEmailAddresses = new List<string>();
-            //Files = new List<FileInfo>();
-            FileUrls = new List<string>();
-            TestMode = 0;
-        }
     }
 
     public class RemindSignatureRequestData
@@ -90,15 +85,16 @@ namespace HelloSignNet.Core
 
     public class Signer
     {
-        public string Name { get; private set; }
-        public string EmailAddress { get; private set; }
-        public string Order { get; set; } // integer in string format
-        public string Pin { get; set; }
         public Signer(string name, string emailAddress)
         {
             Name = name;
             EmailAddress = emailAddress;
         }
+
+        public string Name { get; private set; }
+        public string EmailAddress { get; private set; }
+        public string Order { get; set; } // integer in string format
+        public string Pin { get; set; }
     }
 
     public class ResponseData
@@ -109,5 +105,4 @@ namespace HelloSignNet.Core
         public string Value { get; set; }
         public string Type { get; set; }
     }
-
 }

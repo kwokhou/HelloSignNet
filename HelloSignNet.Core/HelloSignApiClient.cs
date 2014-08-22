@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -8,25 +9,25 @@ using Newtonsoft.Json;
 
 namespace HelloSignNet.Core
 {
-    public class HelloSignApiClient
+    public class HelloSignClient
     {
         private readonly HttpClient _httpClient;
         private JsonSerializer _serializer;
 
-        public HelloSignApiClient(HelloSignConfig config)
+        public HelloSignClient(HelloSignConfig config)
         {
             Config = config;
             _httpClient = FrameworkHelper.CreateBasicAuthHttpClient(Config.ApiKey, "");
             _httpClient.Timeout = new TimeSpan(0, 0, 0, 0, config.ApiTimeoutMiliseconds);
         }
 
-        public HelloSignApiClient(string apiKey)
+        public HelloSignClient(string apiKey)
             : this(new HelloSignConfig(apiKey))
         {
             // elided
         }
 
-        public HelloSignApiClient(HttpClient httpClient, HelloSignConfig config = null)
+        public HelloSignClient(HttpClient httpClient, HelloSignConfig config = null)
         {
             _httpClient = httpClient;
             Config = config ?? new HelloSignConfig("UNKNOWN-HELLOSIGN-API-KEY");
@@ -51,8 +52,6 @@ namespace HelloSignNet.Core
             return _httpClient.GetAsync(Config.GetSignatureRequestUri + "/" + signatureRequestId)
                 .ContinueWith(t =>
                 {
-                    t.Result.EnsureSuccessStatusCode();
-
                     using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
                     using (var jtr = new JsonTextReader(sr))
                     {
@@ -64,12 +63,13 @@ namespace HelloSignNet.Core
 
         public Task<HSSignatureRequestResponse> SendSignatureRequest(HSSendSignatureRequestData request)
         {
-            MultipartFormDataContent formData = CreateFormData(request);
+            if (!request.IsValid)
+                throw new ArgumentException("Invalid Signature Request Data");
+
+            var formData = CreateFormData(request);
 
             return _httpClient.PostAsync(Config.SendSignatureRequestUri, formData).ContinueWith(t =>
             {
-                t.Result.EnsureSuccessStatusCode();
-
                 using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
                 using (var jtr = new JsonTextReader(sr))
                 {
@@ -81,14 +81,12 @@ namespace HelloSignNet.Core
 
         public Task<HSSignatureRequestResponse> RemindSignatureRequest(HSRemindSignatureRequestData request)
         {
-            MultipartFormDataContent formData = CreateFormData(request);
+            var formData = CreateFormData(request);
 
             return
                 _httpClient.PostAsync(Config.RemindSignatureRequestUri + "/" + request.SignatureRequestId, formData)
                     .ContinueWith(t =>
                     {
-                        t.Result.EnsureSuccessStatusCode();
-
                         using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
                         using (var jtr = new JsonTextReader(sr))
                         {
@@ -114,7 +112,6 @@ namespace HelloSignNet.Core
                 ContentDispositionHeaderValue contentDisposition = response.Content.Headers.ContentDisposition;
                 string filename = contentDisposition.FileName.Trim('"');
 
-                response.EnsureSuccessStatusCode();
                 response.Content.ReadAsStreamAsync()
                     .ContinueWith(a => FileStorage.SaveFileAsync(a.Result, outputPath, filename));
 
@@ -127,9 +124,7 @@ namespace HelloSignNet.Core
             return
                 _httpClient.PostAsync(Config.CancelSignatureRequestUri + "/" + signatureRequestId, null).ContinueWith(t =>
                 {
-                    HttpResponseMessage response = t.Result;
-                    response.EnsureSuccessStatusCode();
-
+                    var response = t.Result;
                     return response.IsSuccessStatusCode;
                 });
         }
@@ -164,19 +159,18 @@ namespace HelloSignNet.Core
                     formData.AddStringContent(string.Format("signers[{0}][pin]", i), request.Signers[i].Pin);
             }
 
-            /*
-            for (var i = 0; i < request.Files.Count; i++)
+            for (var i = 0; request.Files != null && i < request.Files.Count; i++)
             {
                 formData.AddFileStreamContent(request.Files[i].FullName, request.Files[i].Name);
             }
 
-            for (var i = 0; i < request.FileUrls.Count; i++)
+            for (var i = 0; request.FileUrls != null && i < request.FileUrls.Count; i++)
             {
                 formData.AddStringContent(string.Format("file_url[{0}]", i), request.FileUrls[i]);
             }
 
             formData.AddStringContent("test_mode", request.TestMode.ToString(CultureInfo.InvariantCulture));
-            */
+
             return formData;
         }
 

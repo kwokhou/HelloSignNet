@@ -1,0 +1,46 @@
+﻿{
+	"signature_request": {
+		"signature_request_id": "a9f4825edef25f47e7b",
+		"title": "NDA with Acme Co.",
+		"subject": "The NDA we talked about",
+		"message": "Please sign this NDA and then we can discuss more. Let me know if you have any questions.",
+		"is_complete": false,
+		"has_error": false,
+		"custom_fields": [
+		],
+		"response_data": [
+		],
+		"signing_url": "https:\/\/www.hellosign.com\/editor\/sign?guid=a9f4825edef25f47e7b",
+		"signing_redirect_url": null,
+		"details_url": "https:\/\/www.hellosign.com\/home\/manage?locate=a9f4825edef25f47e7b",
+		"requester_email_address": "me@hellosign.com",
+		"signatures": [
+			{
+				"signature_id": "78caf2a1d01cd39cea2bc1cbb340dac3",
+				"signer_email_address": "jack@example.com",
+				"signer_name": "Jack",
+				"order": 0,
+				"status_code": "awaiting_signature",
+				"signed_at": null,
+				"last_viewed_at": null,
+				"last_reminded_at": null,
+				"has_pin": false
+			},
+			{
+				"signature_id": "616629ed37f8588d28600be17ab5d6b7",
+				"signer_email_address": "jill@example.com",
+				"signer_name": "Jill",
+				"order": 1,
+				"status_code": "awaiting_signature",
+				"signed_at": null,
+				"last_viewed_at": null,
+				"last_reminded_at": null,
+				"has_pin": false
+			}
+		],
+		"cc_email_addresses": [
+			"lawyer@hellosign.com",
+			"lawyer@example.com"
+		]
+	}
+}

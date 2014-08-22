@@ -13,41 +13,11 @@ namespace HelloSignNet.Tests
     public class SigniningRequestTests
     {
         [Fact]
-        public void SampleTest1()
+        public void Get_Account_Response_Test()
         {
-            Assert.Equal(4, 2 + 2);
-        }
-
-        private HelloSignApiClient _helloClient;
-
-        private const string TestApiKey = "RAMDOM API";
-        private const string TestBaseUri = "RAMDOM URI";
-
-        public SigniningRequestTests()
-        {
-            var config = new HelloSignConfig(TestApiKey, TestBaseUri) ;
-            _helloClient = new HelloSignApiClient(config) { FileStorage = new WindowsFileStorage() };
-        }
-
-        public void SendSignatureRequestTests()
-        {
-            //var fakeResponse = new HttpResponseMessage(HttpStatusCode.OK);
-            //fakeResponse.Content = new StringContent(););
-            //var httpClient = new HttpClient(new FakeHttpHandler()
-            //{
-            //    Response = =
-            //});
-        }
-
-        [Fact]
-        public void GetAccount_Success_Response_Test()
-        {
-            var json = File.ReadAllText("TestData\\GetAccount-OK.json");
-            var fakeHandler = new FakeHttpHandler(HttpStatusCode.OK, json);
-
-            using (var httpClient = new HttpClient(fakeHandler))
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\GetAccount-OK.json"))
             {
-                var apiClient = new HelloSignApiClient(httpClient);
+                var apiClient = new HelloSignClient(httpClient);
                 var t = apiClient.GetAccount();
 
                 var expected = new HSAccount
@@ -73,12 +43,9 @@ namespace HelloSignNet.Tests
         [Fact]
         public void Get_Unauthorized_Error_Test()
         {
-            var json = File.ReadAllText("TestData\\Error.json");
-            var fakeHandler = new FakeHttpHandler(HttpStatusCode.Unauthorized, json);
-
-            using (var httpClient = new HttpClient(fakeHandler))
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\Error.json"))
             {
-                var apiClient = new HelloSignApiClient(httpClient);
+                var apiClient = new HelloSignClient(httpClient);
                 var t = apiClient.GetAccount();
 
                 var expected = new HSError
@@ -87,6 +54,8 @@ namespace HelloSignNet.Tests
                     ErrorName = "unauthorized"
                 };
 
+                Assert.False(t.Result.IsSuccess);
+                Assert.True(t.Result.HasError);
                 Assert.Equal(expected, t.Result.Error);
             }
         }
@@ -94,12 +63,9 @@ namespace HelloSignNet.Tests
         [Fact]
         public void Get_Warning_Response_Test()
         {
-            var json = File.ReadAllText("TestData\\Warning.json");
-            var fakeHandler = new FakeHttpHandler(HttpStatusCode.OK, json);
-
-            using (var httpClient = new HttpClient(fakeHandler))
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\Warning.json"))
             {
-                var apiClient = new HelloSignApiClient(httpClient);
+                var apiClient = new HelloSignClient(httpClient);
                 var t = apiClient.GetAccount();
 
                 var warnings = new List<HSWarning>();
@@ -110,59 +76,119 @@ namespace HelloSignNet.Tests
                 };
                 warnings.Add(expected);
 
+
+                Assert.False(t.Result.IsSuccess);
+                Assert.True(t.Result.HasWarnings);
                 Assert.Equal(warnings[0], t.Result.Warnings[0]);
             }
         }
 
         [Fact]
-        public void GetSignatureRequestTest()
+        public void Get_SignatureRequest_Response_Test()
         {
-            var t = _helloClient.GetSignatureRequest("3d82cca3e3bb28a116f69508548a0497811215f1");
-            Assert.Equal("3d82cca3e3bb28a116f69508548a0497811215f1",t.Result.SignatureRequest.SignatureRequestId);
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\GetSignatureRequest.json"))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+                var t = apiClient.GetSignatureRequest("fa5c8a0b0f492d768749333ad6fcc214c111e967");
+
+                Assert.Equal("fa5c8a0b0f492d768749333ad6fcc214c111e967", t.Result.SignatureRequest.SignatureRequestId);
+            }
         }
 
         [Fact]
-        public void SendSignatureRequestTest()
+        public void Send_SignatureRequest_Files_Response_Test()
         {
-            var signatureRequest = new HSSendSignatureRequestData();
+            var requestData = new HSSendSignatureRequestData
+            {
+                Title = "NDA for Project X",
+                Subject = "NDA We Talk about",
+                Message = "Bla Bla Bla",
+                Signers = new List<HSSigner> {new HSSigner {Name = "John", EmailAddress = "john@example.com"}},
+                Files = new List<FileInfo> {new FileInfo("TestData\\pdf-sample.pdf")}
+            };
 
-            var t = _helloClient.SendSignatureRequest(signatureRequest);
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\SignatureRequest.json"))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+                var t = apiClient.SendSignatureRequest(requestData);
 
-            Assert.Equal("1001221cdb7c474cfaef5cf0bf0eacb0639caa34", t.Result.SignatureRequest.SignatureRequestId);
+                Assert.Equal("a9f4825edef25f47e7b", t.Result.SignatureRequest.SignatureRequestId);
+            }
+        }
+
+        [Fact]
+        public void Send_SignatureRequest_FileUrls_Response_Test()
+        {
+            var requestData = new HSSendSignatureRequestData
+            {
+                Title = "NDA for Project X",
+                Subject = "NDA We Talk about",
+                Message = "Bla Bla Bla",
+                Signers = new List<HSSigner> { new HSSigner { Name = "John", EmailAddress = "john@example.com" } },
+                FileUrls = new List<string> { "http://www.hollywood-arts.org/wp-content/uploads/2014/05/pdf-sample.pdf" }
+            };
+
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\SignatureRequest.json"))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+                var t = apiClient.SendSignatureRequest(requestData);
+
+                Assert.Equal("a9f4825edef25f47e7b", t.Result.SignatureRequest.SignatureRequestId);
+            }
+        }
+
+        public static HttpClient FakeClientWithJsonResponse(string jsonFilepath)
+        {
+            if (!string.IsNullOrEmpty(jsonFilepath))
+            {
+                var json = File.ReadAllText(jsonFilepath);
+                var fakeHandler = new FakeHttpHandler(json);
+                return new HttpClient(fakeHandler);
+            }
+            else
+            {
+                var fakeHandler = new FakeHttpHandler(null);
+                return new HttpClient(fakeHandler);
+            }
         }
 
         [Fact]
         public void RemindSignatureRequestTest()
         {
-            var remindSignatureRequestData = new HSRemindSignatureRequestData
+            var requestData = new HSRemindSignatureRequestData();
+
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\SignatureRequest-Remind.json"))
             {
-                SignatureRequestId = "c406d5a99cce33ee0026ade5a939183a833c195b",
-                EmailAddress = "andy@estorm.com"
-            };
+                var apiClient = new HelloSignClient(httpClient);
+                var t = apiClient.RemindSignatureRequest(requestData);
 
-            var t = _helloClient.RemindSignatureRequest(remindSignatureRequestData);
-
-            Assert.Equal("c406d5a99cce33ee0026ade5a939183a833c195b", t.Result.SignatureRequest.SignatureRequestId);
+                Assert.Equal("2f9781e1a8e2045224d808c153c2e1d3df6f8f2f", t.Result.SignatureRequest.SignatureRequestId);
+            }
         }
 
         [Fact]
         public void CancelSignatureRequestTest()
         {
-            var t = _helloClient.CancelSignatureRequest("c406d5a99cce33ee0026ade5a939183a833c195b");
-            Assert.True(t.Result);
+            using (var httpClient = FakeClientWithJsonResponse(null))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+                var t = apiClient.CancelSignatureRequest("abcdeng");
+
+                Assert.Equal(true, t.Result);
+            }
         }
 
-        [Fact]
-        public void DownloadSignatureRequestDocumentsTest()
-        {
-            var downloadSignatureRequestData = new HSDownloadSignatureRequestData { SignatureRequestId = "ab0f0999743c14fc3a5fa0d830f7220899a1ab58", FileType = "pdf" };
+        //[Fact]
+        //public void DownloadSignatureRequestDocumentsTest()
+        //{
+        //    var downloadSignatureRequestData = new HSDownloadSignatureRequestData { SignatureRequestId = "ab0f0999743c14fc3a5fa0d830f7220899a1ab58", FileType = "pdf" };
 
-            var t = _helloClient.DownloadSignatureRequestDocuments(downloadSignatureRequestData, @"c:\temp");
+        //    var t = _helloClient.DownloadSignatureRequestDocuments(downloadSignatureRequestData, @"c:\temp");
 
-            t.Wait();
+        //    t.Wait();
 
-            Assert.True(File.Exists(@"c:\temp\"+ t.Result));
-        }
+        //    Assert.True(File.Exists(@"c:\temp\" + t.Result));
+        //}
     }
 
     public class WindowsFileStorage : IFileStorage
@@ -193,14 +219,14 @@ namespace HelloSignNet.Tests
     {
         private readonly HttpResponseMessage _response;
 
-        public FakeHttpHandler(HttpStatusCode responseStatusCode, string responseContent)
+        public FakeHttpHandler(string responseContent)
         {
-            _response = new HttpResponseMessage(responseStatusCode) {Content = new StringContent(responseContent)};
+            _response = new HttpResponseMessage() { Content = new StringContent(responseContent ?? "") };
         }
 
         public FakeHttpHandler(HttpStatusCode responseStatusCode, Stream responseContent)
         {
-            _response = new HttpResponseMessage(responseStatusCode) { Content = new StreamContent(responseContent) };
+            _response = new HttpResponseMessage() { Content = new StreamContent(responseContent) };
         }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

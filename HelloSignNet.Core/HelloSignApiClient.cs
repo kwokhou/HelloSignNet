@@ -96,10 +96,10 @@ namespace HelloSignNet.Core
                     });
         }
 
-        public Task<string> DownloadSignatureRequestDocuments(HSDownloadSignatureRequestData request, string outputPath)
+        public Task<string> DownloadSignatureRequestDocuments(HSDownloadSignatureRequestData request, string outputDir)
         {
             if (FileStorage == null)
-                throw new IOException("Undefined FileStore in HelloSign.Config");
+                throw new IOException("Undefined FileStore");
 
             string getUrl = Config.GetSignatureRequestFilesUri + "/" + request.SignatureRequestId;
 
@@ -112,8 +112,9 @@ namespace HelloSignNet.Core
                 ContentDispositionHeaderValue contentDisposition = response.Content.Headers.ContentDisposition;
                 string filename = contentDisposition.FileName.Trim('"');
 
-                response.Content.ReadAsStreamAsync()
-                    .ContinueWith(a => FileStorage.SaveFileAsync(a.Result, outputPath, filename));
+                var download = response.Content.ReadAsStreamAsync()
+                    .ContinueWith(a => FileStorage.SaveFileAsync(a.Result, outputDir, filename));
+                download.Wait();
 
                 return filename;
             });

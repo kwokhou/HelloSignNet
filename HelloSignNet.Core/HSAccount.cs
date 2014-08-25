@@ -21,13 +21,19 @@ namespace HelloSignNet.Core
 
         public bool Equals(HSAccount other)
         {
+            bool isSameQuotas = false;
+            if (Quotas != null && other.Quotas != null)
+                isSameQuotas = Quotas.Equals(other.Quotas);
+            else if (Quotas == null && other.Quotas == null)
+                isSameQuotas = true;
+
             var res = (
                 AccountId == other.AccountId &&
                 EmailAddress == other.EmailAddress &&
                 IsPaidHS == other.IsPaidHS &&
                 IsPaidHF == other.IsPaidHF &&
                 CallbackUrl == other.CallbackUrl &&
-                RoleCode == other.RoleCode && Quotas.Equals(other.Quotas));
+                RoleCode == other.RoleCode && isSameQuotas);
 
             return res;
         }

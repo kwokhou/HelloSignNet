@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -33,6 +34,68 @@ namespace HelloSignNet.Tests
                         ApiSignatureRequest = 1250,
                         DocumentsLeft = null,
                         TemplatesLeft = null
+                    }
+                };
+
+                Assert.Equal(expected, t.Result.Account);
+            }
+        }
+
+        [Fact]
+        public void Update_Account_Response_Test()
+        {
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\UpdateAccount.json"))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+                var t = apiClient.GetAccount();
+                var expected = new HSAccount
+                {
+                    AccountId = "5008b25c7f67153e57d5a357b1687968068fb465",
+                    EmailAddress = "me@hellosign.com",
+                    IsPaidHS = true,
+                    IsPaidHF = false,
+                    Quotas = new HSQuotas { ApiSignatureRequest = 1250 },
+                    CallbackUrl = "https://www.example.com/callback",
+                };
+
+                Assert.Equal(expected, t.Result.Account);
+            }
+        }
+
+        [Fact]
+        public void Verify_Account_Response_Test()
+        {
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\VerifyAccount.json"))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+                var t = apiClient.VerifyAccount("some_user@hellosign.com");
+                var expected = new HSAccount
+                {
+                    EmailAddress = "some_user@hellosign.com"
+                };
+
+                Assert.Equal(expected, t.Result.Account);
+            }
+        }
+
+        [Fact]
+        public void Create_Account_Response_Test()
+        {
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\CreateAccount.json"))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+                var t = apiClient.CreateAccount("newuser@hellosign.com", "somepassowrd");
+                var expected = new HSAccount
+                {
+                    AccountId = "a2b31224f7e6fb5581d2f8cbd91cf65fa2f86aae",
+                    EmailAddress = "newuser@hellosign.com",
+                    IsPaidHS = false,
+                    IsPaidHF = false,
+                    Quotas = new HSQuotas
+                    {
+                        DocumentsLeft = 3,
+                        ApiSignatureRequest = 0,
+                        TemplatesLeft = 1
                     }
                 };
 
@@ -111,8 +174,29 @@ namespace HelloSignNet.Tests
             {
                 var apiClient = new HelloSignClient(httpClient);
                 var t = apiClient.SendSignatureRequest(requestData);
-
+                t.Wait();
                 Assert.Equal("a9f4825edef25f47e7b", t.Result.SignatureRequest.SignatureRequestId);
+            }
+        }
+
+        [Fact]
+        public void Send_Invalid_SignatureRequest_Get_Exception()
+        {
+            var requestData = new HSSendSignatureRequestData
+            {
+                Title = "NDA for Project X",
+                Subject = "NDA We Talk about",
+                Message = "Bla Bla Bla",
+                Files = new List<FileInfo> {new FileInfo("TestData\\pdf-sample.pdf")}
+            };
+
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\SignatureRequest.json"))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+
+                Assert.Throws<ArgumentException>(() => { 
+                    apiClient.SendSignatureRequest(requestData);
+                });
             }
         }
 
@@ -134,6 +218,37 @@ namespace HelloSignNet.Tests
                 var t = apiClient.SendSignatureRequest(requestData);
 
                 Assert.Equal("a9f4825edef25f47e7b", t.Result.SignatureRequest.SignatureRequestId);
+            }
+        }
+
+        [Fact]
+        public void Download_SignatureRequest_Document_Response_Test()
+        {
+            using (var httpClient = FakeClientWithFileResponse("sample.pdf","TestData\\pdf-sample.pdf"))
+            {
+                var apiClient = new HelloSignClient(httpClient) {FileStorage = new WindowsFileStorage()};
+                var outputPath = new FileInfo("TestData\\sample.pdf");
+                if (outputPath.Exists)
+                    outputPath.Delete();
+
+                var t = apiClient.DownloadSignatureRequestDocuments(new HSDownloadSignatureRequestData { SignatureRequestId = "DUMMY-SIGNATURE-ID", FileType = "pdf" }, outputPath.DirectoryName);
+                t.Wait();
+
+                Assert.True(outputPath.Exists);
+            }
+        }
+
+        public static HttpClient FakeClientWithFileResponse(string fileName, string filePath)
+        {
+            if (!string.IsNullOrEmpty(filePath))
+            {
+                var fakeHandler = new FakeHttpHandler(fileName, filePath);
+                return new HttpClient(fakeHandler);
+            }
+            else
+            {
+                var fakeHandler = new FakeHttpHandler(null);
+                return new HttpClient(fakeHandler);
             }
         }
 
@@ -218,6 +333,17 @@ namespace HelloSignNet.Tests
     public class FakeHttpHandler : DelegatingHandler
     {
         private readonly HttpResponseMessage _response;
+
+        public FakeHttpHandler(string fileName, string filePath)
+        {
+            var fs = new FileStream(filePath, FileMode.Open);
+            var sc = new StreamContent(fs);
+            sc.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = fileName
+            };
+            _response = new HttpResponseMessage { Content = sc };
+        }
 
         public FakeHttpHandler(string responseContent)
         {

@@ -175,6 +175,7 @@ namespace HelloSignNet.Core
             return formData;
         }
 
+        #region Accounts API
         public Task<HSAccountResponse> GetAccount()
         {
             return _httpClient.GetAsync(Config.GetAcountUri)
@@ -188,5 +189,67 @@ namespace HelloSignNet.Core
                     }
                 });
         }
+
+        public Task<HSAccountResponse> UpdateAccount(string callbackUrl)
+        {
+            var formData = new MultipartFormDataContent();
+
+            if (!string.IsNullOrEmpty(callbackUrl))
+                formData.AddStringContent("callback_url", callbackUrl);
+
+            return _httpClient.PostAsync(Config.UpdateAccountUri, formData)
+                .ContinueWith(t =>
+                {
+                    using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
+                    using (var tr = new JsonTextReader(sr))
+                    {
+                        var resp = Serializer.Deserialize<HSAccountResponse>(tr);
+                        return resp;
+                    }
+                });
+        }
+
+        public Task<HSAccountResponse> VerifyAccount(string emailAddress)
+        {
+            var formData = new MultipartFormDataContent();
+            if (!string.IsNullOrEmpty(emailAddress))
+                formData.AddStringContent("email_address", emailAddress);
+
+            return _httpClient.PostAsync(Config.VerifyAccountUri, formData)
+                .ContinueWith(t =>
+                {
+                    using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
+                    using (var tr = new JsonTextReader(sr))
+                    {
+                        var resp = Serializer.Deserialize<HSAccountResponse>(tr);
+                        return resp;
+                    }
+                });
+        }
+
+        public Task<HSAccountResponse> CreateAccount(string emailAddress, string password)
+        {
+            var formData = new MultipartFormDataContent();
+            if (!string.IsNullOrEmpty(emailAddress) && !string.IsNullOrEmpty(password))
+            {
+                formData.AddStringContent("email_address", emailAddress);
+                formData.AddStringContent("password", password);
+            }
+            else
+                throw new ArgumentNullException("emailAddress", "Both email address and password is required");
+
+            return _httpClient.PostAsync(Config.CreateAccountUri, formData)
+                .ContinueWith(t =>
+                {
+                    using (var sr = new StreamReader(t.Result.Content.ReadAsStreamAsync().Result))
+                    using (var tr = new JsonTextReader(sr))
+                    {
+                        var resp = Serializer.Deserialize<HSAccountResponse>(tr);
+                        return resp;
+                    }
+                });
+        }
+
+        #endregion
     }
 }

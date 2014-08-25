@@ -42,11 +42,9 @@ namespace HelloSignNet.Core
         public static MultipartFormDataContent AddFileStreamContent(this MultipartFormDataContent formDataContent,
             string filePath, string filename)
         {
-            using (var fs = new FileStream(filePath, FileMode.Open))
-            {
-                formDataContent.Add(CreateFileStreamContent(fs, filename));
-                return formDataContent;
-            }
+            var fs = new FileStream(filePath, FileMode.Open);
+            formDataContent.Add(CreateFileStreamContent(fs, filename));
+            return formDataContent;
         }
 
         private static StringContent CreateStringContent(string name, string content)

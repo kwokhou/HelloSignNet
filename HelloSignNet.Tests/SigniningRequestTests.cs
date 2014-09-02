@@ -47,7 +47,7 @@ namespace HelloSignNet.Tests
             using (var httpClient = FakeClientWithJsonResponse("TestData\\UpdateAccount.json"))
             {
                 var apiClient = new HelloSignClient(httpClient);
-                var t = apiClient.GetAccount();
+                var t = apiClient.UpdateAccount("https://www.example.com/callback");
                 var expected = new HSAccount
                 {
                     AccountId = "5008b25c7f67153e57d5a357b1687968068fb465",
@@ -100,6 +100,19 @@ namespace HelloSignNet.Tests
                 };
 
                 Assert.Equal(expected, t.Result.Account);
+            }
+        }
+
+        [Fact]
+        public void Create_Account_withou_Email_Password_throws_Exception()
+        {
+            using (var httpClient = FakeClientWithJsonResponse("TestData\\CreateAccount.json"))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+
+                Assert.Throws<ArgumentNullException>(() => { 
+                    var t = apiClient.CreateAccount("", null);
+                });
             }
         }
 
@@ -208,8 +221,8 @@ namespace HelloSignNet.Tests
                 Title = "NDA for Project X",
                 Subject = "NDA We Talk about",
                 Message = "Bla Bla Bla",
-                Signers = new List<HSSigner> { new HSSigner { Name = "John", EmailAddress = "john@example.com" } },
-                FileUrls = new List<string> { "http://www.hollywood-arts.org/wp-content/uploads/2014/05/pdf-sample.pdf" }
+                Signers = new List<HSSigner> { new HSSigner { Name = "John", EmailAddress = "john@example.com", Order = "1", Pin = "1234" } },
+                FileUrls = new List<string> { "http://www.hollywood-arts.org/wp-content/uploads/2014/05/pdf-sample.pdf" },
             };
 
             using (var httpClient = FakeClientWithJsonResponse("TestData\\SignatureRequest.json"))
@@ -238,6 +251,23 @@ namespace HelloSignNet.Tests
             }
         }
 
+        [Fact]
+        public void Download_SignatureRequest_without_FileStorage_throw_Exception_Test()
+        {
+            using (var httpClient = FakeClientWithFileResponse("sample.pdf","TestData\\pdf-sample.pdf"))
+            {
+                var apiClient = new HelloSignClient(httpClient);
+                var outputPath = new FileInfo("TestData\\sample.pdf");
+                if (outputPath.Exists)
+                    outputPath.Delete();
+
+                Assert.Throws<IOException>(() =>
+                {
+                    var t = apiClient.DownloadSignatureRequestDocuments(new HSDownloadSignatureRequestData { SignatureRequestId = "DUMMY-SIGNATURE-ID", FileType = "pdf" }, outputPath.DirectoryName);
+                    t.Wait();
+                });
+            }
+        }
         public static HttpClient FakeClientWithFileResponse(string fileName, string filePath)
         {
             if (!string.IsNullOrEmpty(filePath))
@@ -270,7 +300,11 @@ namespace HelloSignNet.Tests
         [Fact]
         public void RemindSignatureRequestTest()
         {
-            var requestData = new HSRemindSignatureRequestData();
+            var requestData = new HSRemindSignatureRequestData
+            {
+                SignatureRequestId = "2f9781e1a8e2045224d808c153c2e1d3df6f8f2f",
+                EmailAddress="me@hellosign.com",
+            };
 
             using (var httpClient = FakeClientWithJsonResponse("TestData\\SignatureRequest-Remind.json"))
             {

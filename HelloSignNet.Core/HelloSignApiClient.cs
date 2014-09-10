@@ -170,7 +170,13 @@ namespace HelloSignNet.Core
                 formData.AddStringContent(string.Format("file_url[{0}]", i), request.FileUrls[i]);
             }
 
-            formData.AddStringContent("test_mode", request.TestMode.ToString(CultureInfo.InvariantCulture));
+            if (request.UseTextTags == 1)
+                formData.AddStringContent("use_text_tags", "1");
+
+            if (request.HideTextTags == 1)
+                formData.AddStringContent("hide_text_tags", "1");
+            
+            formData.AddStringContent("test_mode", "1");
 
             return formData;
         }

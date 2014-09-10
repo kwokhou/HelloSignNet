@@ -14,7 +14,9 @@ namespace HelloSignNet.Core
         public List<string> CcEmailAddresses { get; set; }
         public List<FileInfo> Files { get; set; }
         public List<string> FileUrls { get; set; }
-        public int TestMode { get; set; } // true=1, false=0
+        public int TestMode { get; set; } // true=1, false=0, default=0
+        public int UseTextTags { get; set; } // true=1, false=0, default=0
+        public int HideTextTags { get; set; } // true=1, false=0, default=0
 
         public bool IsValid 
         {
@@ -25,10 +27,14 @@ namespace HelloSignNet.Core
                     return false;
                 }
 
+                // API does not accept both files param in a request
+                if (Files != null && FileUrls != null && Files.Any() && FileUrls.Any())
+                    return false;
+
                 if (Files != null && FileUrls == null)
                 {
                     if (!Files.Any())
-                        return true;
+                        return false;
                 }
 
                 if (Files == null && FileUrls != null)

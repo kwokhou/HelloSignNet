@@ -21,13 +21,25 @@ namespace HelloSignNet.Core
             get
             {
                 if (Files == null && FileUrls == null)
+                {
                     return false;
-                if (Files != null && (Files.Count == 0 && FileUrls.Count == 0))
-                    return false;
-                if ((Files != null && FileUrls != null) && (Files.Count > 0 && FileUrls.Count > 0))
-                    return false;
+                }
+
+                if (Files != null && FileUrls == null)
+                {
+                    if (!Files.Any())
+                        return true;
+                }
+
+                if (Files == null && FileUrls != null)
+                {
+                    if (!FileUrls.Any())
+                        return false;
+                }
+
                 if (Signers == null || Signers.Count == 0)
                     return false;
+
                 if (Signers.Any(s => string.IsNullOrEmpty(s.Name) || string.IsNullOrEmpty(s.EmailAddress)))
                     return false;
 

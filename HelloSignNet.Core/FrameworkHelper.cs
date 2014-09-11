@@ -39,11 +39,10 @@ namespace HelloSignNet.Core
             return formDataContent;
         }
 
-        public static MultipartFormDataContent AddFileStreamContent(this MultipartFormDataContent formDataContent,
-            string filePath, string filename)
+        public static MultipartFormDataContent AddFileStreamContent(this MultipartFormDataContent formDataContent, int index, string filePath, string filename)
         {
             var fs = new FileStream(filePath, FileMode.Open);
-            formDataContent.Add(CreateFileStreamContent(fs, filename));
+            formDataContent.Add(CreateFileStreamContent(index, fs, filename));
             return formDataContent;
         }
 
@@ -58,12 +57,13 @@ namespace HelloSignNet.Core
             return res;
         }
 
-        private static StreamContent CreateFileStreamContent(Stream stream, string filename)
+        private static StreamContent CreateFileStreamContent(int index, Stream stream, string filename)
         {
             var res = new StreamContent(stream);
+            var name = string.Format("\"file[{0}]\"", index);
             res.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
             {
-                Name = "\"file[0]\"",
+                Name = name,
                 FileName = "\"" + filename + "\""
             };
             res.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");

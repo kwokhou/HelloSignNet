@@ -162,7 +162,7 @@ namespace HelloSignNet.Core
 
             for (var i = 0; request.Files != null && i < request.Files.Count; i++)
             {
-                formData.AddFileStreamContent(request.Files[i].FullName, request.Files[i].Name);
+                formData.AddFileStreamContent(i, request.Files[i].FullName, request.Files[i].Name);
             }
 
             for (var i = 0; request.FileUrls != null && i < request.FileUrls.Count; i++)

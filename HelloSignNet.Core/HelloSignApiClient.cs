@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -148,8 +149,10 @@ namespace HelloSignNet.Core
                 formData.AddStringContent("subject", request.Subject);
             if (!string.IsNullOrEmpty(request.Message))
                 formData.AddStringContent("message", request.Message);
+            if (!string.IsNullOrEmpty(request.SigningRedirectUrl))
+                formData.AddStringContent("signing_redirect_url", request.SigningRedirectUrl);
 
-            for (int i = 0; i < request.Signers.Count; i++)
+            for (var i = 0; i < request.Signers.Count; i++)
             {
                 formData.AddStringContent(string.Format("signers[{0}][name]", i), request.Signers[i].Name);
                 formData.AddStringContent(string.Format("signers[{0}][email_address]", i),
@@ -158,6 +161,11 @@ namespace HelloSignNet.Core
                     formData.AddStringContent(string.Format("signers[{0}][order]", i), request.Signers[i].Order);
                 if (!string.IsNullOrEmpty(request.Signers[i].Pin))
                     formData.AddStringContent(string.Format("signers[{0}][pin]", i), request.Signers[i].Pin);
+            }
+
+            for (var i = 0; request.CcEmailAddresses != null && i < request.CcEmailAddresses.Count; i++)
+            {
+                formData.AddStringContent(string.Format("cc_email_addresses[{0}]", i), request.Signers[i].Name);
             }
 
             for (var i = 0; request.Files != null && i < request.Files.Count; i++)

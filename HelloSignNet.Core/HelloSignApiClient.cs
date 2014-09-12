@@ -165,7 +165,7 @@ namespace HelloSignNet.Core
 
             for (var i = 0; request.CcEmailAddresses != null && i < request.CcEmailAddresses.Count; i++)
             {
-                formData.AddStringContent(string.Format("cc_email_addresses[{0}]", i), request.Signers[i].Name);
+                formData.AddStringContent(string.Format("cc_email_addresses[{0}]", i), request.CcEmailAddresses[i]);
             }
 
             for (var i = 0; request.Files != null && i < request.Files.Count; i++)

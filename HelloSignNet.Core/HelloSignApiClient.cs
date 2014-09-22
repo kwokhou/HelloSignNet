@@ -111,7 +111,12 @@ namespace HelloSignNet.Core
             {
                 HttpResponseMessage response = t.Result;
                 ContentDispositionHeaderValue contentDisposition = response.Content.Headers.ContentDisposition;
-                string filename = contentDisposition.FileName.Trim('"');
+
+                // Not found
+                if (contentDisposition == null)
+                    return null;
+
+                var filename = contentDisposition.FileName.Trim('"');
 
                 var download = response.Content.ReadAsStreamAsync()
                     .ContinueWith(a => FileStorage.SaveFileAsync(a.Result, outputDir, filename));
@@ -190,6 +195,7 @@ namespace HelloSignNet.Core
         }
 
         #region Accounts API
+
         public Task<HSAccountResponse> GetAccount()
         {
             return _httpClient.GetAsync(Config.GetAcountUri)

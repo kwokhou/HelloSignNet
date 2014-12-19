@@ -126,6 +126,24 @@ namespace HelloSignNet.Core
             });
         }
 
+        public Task<Stream> DownloadSignatureRequestDocuments(HSDownloadSignatureRequestData request)
+        {
+            string getUrl = Config.GetSignatureRequestFilesUri + "/" + request.SignatureRequestId;
+            if (!string.IsNullOrEmpty(request.FileType))
+                getUrl = getUrl + "?file_type=" + request.FileType;
+
+            return _httpClient.GetAsync(getUrl, HttpCompletionOption.ResponseHeadersRead).ContinueWith(t =>
+            {
+                HttpResponseMessage response = t.Result;
+
+                // No documents found from the input request data
+                if (response.Content.Headers.ContentDisposition == null)
+                    return null;
+
+                return response.Content.ReadAsStreamAsync().Result;
+            });
+        }
+
         public Task<bool> CancelSignatureRequest(string signatureRequestId)
         {
             return
